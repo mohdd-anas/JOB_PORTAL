@@ -1,9 +1,9 @@
 import React from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { setAllApplicants } from '@/redux/applicationSlice'
+import { setAllApplicant } from '@/redux/applicationSlice'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { MoreVertical, FileText, CheckCircle, XCircle, Clock } from 'lucide-react'
-import api from '@/lib/api'
+import { MoveVertical as MoreVertical, FileText, CircleCheck as CheckCircle, Circle as XCircle, Clock } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
 const ApplicantsTable = () => {
@@ -12,16 +12,18 @@ const ApplicantsTable = () => {
 
     const statusHandler = async (status, id) => {
         try {
-            const res = await api.post(`/application/status/${id}/update`, { status })
-            if (res.data.success) {
-                const updated = (applicants || []).map(app =>
-                    app._id === id ? { ...app, status: status.toLowerCase() } : app
-                )
-                dispatch(setAllApplicants(updated))
-                toast.success(res.data.message)
-            }
+            const { error } = await supabase
+                .from('applications')
+                .update({ status: status.toLowerCase() })
+                .eq('id', id)
+            if (error) throw error
+            const updated = (applicants || []).map(app =>
+                app._id === id ? { ...app, status: status.toLowerCase() } : app
+            )
+            dispatch(setAllApplicant(updated))
+            toast.success('Status updated successfully')
         } catch (error) {
-            toast.error(error.response && error.response.data ? error.response.data.message : 'Status update failed')
+            toast.error(error.message || 'Status update failed')
         }
     }
 

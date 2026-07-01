@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import Navbar from '../shared/Navbar'
 import { useNavigate } from 'react-router-dom'
-import api from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { useDispatch } from 'react-redux'
 import { setSingleCompany } from '@/redux/companySlice'
@@ -18,14 +18,19 @@ const CompanyCreate = () => {
         if (!companyName.trim()) { toast.error('Please enter a company name'); return }
         try {
             setLoading(true)
-            const res = await api.post('/company/register', { companyName })
-            if (res.data.success) {
-                dispatch(setSingleCompany(res.data.company))
-                toast.success(res.data.message)
-                navigate(`/admin/companies/${res.data.company._id}`)
-            }
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) { toast.error('You must be logged in'); return }
+            const { data, error } = await supabase
+                .from('companies')
+                .insert({ name: companyName, user_id: session.user.id })
+                .select()
+                .single()
+            if (error) throw error
+            dispatch(setSingleCompany(data))
+            toast.success('Company created successfully')
+            navigate(`/admin/companies/setup/${data.id}`)
         } catch (error) {
-            toast.error(error.response && error.response.data ? error.response.data.message : 'Failed to create company')
+            toast.error(error.message || 'Failed to create company')
         } finally {
             setLoading(false)
         }

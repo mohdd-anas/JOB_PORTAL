@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import api from '@/lib/api'
+import { supabase, mapApplication, mapJob, mapCompany } from '@/lib/supabase'
 import { useDispatch } from 'react-redux'
 import { setAllAppliedJobs } from '@/redux/jobSlice'
 
@@ -9,12 +9,26 @@ const useGetAppliedJobs = () => {
     useEffect(() => {
         const fetchAppliedJobs = async () => {
             try {
-                const res = await api.get('/application/get')
-                if (res.data.success) {
-                    dispatch(setAllAppliedJobs(res.data.applications))
-                }
+                const { data: { session } } = await supabase.auth.getSession()
+                if (!session) return
+
+                const { data, error } = await supabase
+                    .from('applications')
+                    .select(`*, job:jobs(*, company:companies(*))`)
+                    .eq('applicant_id', session.user.id)
+                    .order('created_at', { ascending: false })
+
+                if (error) throw error
+
+                const applications = (data || []).map(row => {
+                    const jobRow = row.job
+                    const companyRow = jobRow ? jobRow.company : null
+                    const job = jobRow ? mapJob(jobRow, mapCompany(companyRow), []) : null
+                    return mapApplication(row, job, null)
+                })
+                dispatch(setAllAppliedJobs(applications))
             } catch (error) {
-                console.error('[useGetAppliedJobs]', error?.response?.data?.message || error.message)
+                console.error('[useGetAppliedJobs]', error.message)
             }
         }
         fetchAppliedJobs()

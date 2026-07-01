@@ -1,175 +1,173 @@
-import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { uploadFile } from "../utils/cloudinary.js";
+import { supabase } from "../utils/supabase.js";
+import { mapUser } from "../utils/mappers.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../middlewares/errorHandler.js";
 
-// @desc    Register a new user
-// @route   POST /api/v1/user/register
-// @access  Public
+const fileToDataUrl = (file) => {
+    if (!file) return "";
+    const base64 = file.buffer.toString("base64");
+    return `data:${file.mimetype};base64,${base64}`;
+};
+
 export const register = asyncHandler(async (req, res, next) => {
     const { fullname, email, phoneNumber, password, role } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        throw new ApiError(400, "User with this email already exists");
-    }
+    const { data: existing } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", email.toLowerCase())
+        .maybeSingle();
+    if (existing) throw new ApiError(400, "User with this email already exists");
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    let profilePhotoUrl = "";
-    if (req.file) {
-        profilePhotoUrl = await uploadFile(req.file);
-    }
+    const profilePhotoUrl = req.file ? fileToDataUrl(req.file) : "";
 
-    await User.create({
-        fullname,
-        email,
-        phoneNumber,
-        password: hashedPassword,
-        role,
-        profile: { 
-            profilePhoto: profilePhotoUrl 
-        }
-    });
+    const { data, error } = await supabase
+        .from("users")
+        .insert({
+            fullname,
+            email: email.toLowerCase(),
+            phone_number: phoneNumber,
+            password: hashedPassword,
+            role,
+            profile_photo: profilePhotoUrl,
+        })
+        .select()
+        .single();
 
-    return res.status(201).json({ 
+    if (error) throw new ApiError(500, error.message);
+
+    return res.status(201).json({
         success: true,
-        message: "Account created successfully" 
+        message: "Account created successfully",
     });
 });
 
-// @desc    Login user
-// @route   POST /api/v1/user/login
-// @access  Public
 export const login = asyncHandler(async (req, res, next) => {
     const { email, password, role } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-        throw new ApiError(400, "Invalid email or password");
-    }
+    const { data: user } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email.toLowerCase())
+        .maybeSingle();
+
+    if (!user) throw new ApiError(400, "Invalid email or password");
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-        throw new ApiError(400, "Invalid email or password");
-    }
+    if (!isPasswordValid) throw new ApiError(400, "Invalid email or password");
 
-    if (role !== user.role) {
+    if (role !== user.role)
         throw new ApiError(400, "Account does not exist for the selected role");
-    }
 
-    if (!process.env.JWT_SECRET) {
+    if (!process.env.JWT_SECRET)
         throw new ApiError(500, "JWT secret is not configured on the server");
-    }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    
-    const userData = {
-        _id: user._id,
-        fullname: user.fullname,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        role: user.role,
-        profile: user.profile,
-    };
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+
+    const userData = mapUser(user);
+    delete userData.password;
 
     return res.status(200)
-        .cookie("token", token, { 
-            httpOnly: true, 
-            sameSite: "strict", 
+        .cookie("token", token, {
+            httpOnly: true,
+            sameSite: "strict",
             secure: process.env.NODE_ENV === "production",
-            maxAge: 24 * 60 * 60 * 1000 
+            maxAge: 24 * 60 * 60 * 1000,
         })
-        .json({ 
+        .json({
             success: true,
-            message: `Welcome back, ${user.fullname}`, 
-            user: userData 
+            message: `Welcome back, ${user.fullname}`,
+            user: userData,
         });
 });
 
-// @desc    Logout user / clear cookie
-// @route   GET /api/v1/user/logout
-// @access  Private
 export const logout = asyncHandler(async (req, res, next) => {
     return res.status(200)
-        .cookie("token", "", { 
+        .cookie("token", "", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "strict",
-            maxAge: 0 
+            maxAge: 0,
         })
-        .json({ 
+        .json({
             success: true,
-            message: "Logged out successfully" 
+            message: "Logged out successfully",
         });
 });
 
-// @desc    Update user profile
-// @route   POST /api/v1/user/profile/update
-// @access  Private
 export const updateProfile = asyncHandler(async (req, res, next) => {
     const { fullname, email, phoneNumber, bio, skills } = req.body;
     const userId = req.id;
 
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new ApiError(404, "User not found");
-    }
+    const { data: user } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+    if (!user) throw new ApiError(404, "User not found");
 
-    if (fullname) user.fullname = fullname;
+    const updates = {};
+    if (fullname) updates.fullname = fullname;
     if (email) {
-        const emailExists = await User.findOne({ email, _id: { $ne: userId } });
-        if (emailExists) {
-            throw new ApiError(400, "Email is already taken by another account");
-        }
-        user.email = email;
+        const { data: emailExists } = await supabase
+            .from("users")
+            .select("id")
+            .eq("email", email.toLowerCase())
+            .neq("id", userId)
+            .maybeSingle();
+        if (emailExists) throw new ApiError(400, "Email is already taken by another account");
+        updates.email = email.toLowerCase();
     }
-    if (phoneNumber) user.phoneNumber = phoneNumber;
-    if (bio) user.profile.bio = bio;
-    
+    if (phoneNumber) updates.phone_number = phoneNumber;
+    if (bio !== undefined) updates.bio = bio;
+
     if (skills) {
-        user.profile.skills = skills.split(",").map(s => s.trim()).filter(Boolean);
+        updates.skills = skills.split(",").map((s) => s.trim()).filter(Boolean);
     }
 
     if (req.file) {
-        const fileUrl = await uploadFile(req.file);
-        user.profile.resume = fileUrl;
-        user.profile.resumeOriginalName = req.file.originalname;
+        updates.resume = fileToDataUrl(req.file);
+        updates.resume_original_name = req.file.originalname;
     }
 
-    await user.save();
+    const { data: updated, error } = await supabase
+        .from("users")
+        .update(updates)
+        .eq("id", userId)
+        .select()
+        .single();
 
-    const updatedUser = {
-        _id: user._id,
-        fullname: user.fullname,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        role: user.role,
-        profile: user.profile,
-    };
+    if (error) throw new ApiError(500, error.message);
 
-    return res.status(200).json({ 
-        success: true,
-        message: "Profile updated successfully", 
-        user: updatedUser 
-    });
-});
-
-// @desc    Get current user profile
-// @route   GET /api/v1/user/me
-// @access  Private
-export const getCurrentUser = asyncHandler(async (req, res, next) => {
-    const userId = req.id;
-
-    const user = await User.findById(userId).select("-password");
-    if (!user) {
-        throw new ApiError(404, "User not found");
-    }
+    const updatedUser = mapUser(updated);
+    delete updatedUser.password;
 
     return res.status(200).json({
         success: true,
-        user
+        message: "Profile updated successfully",
+        user: updatedUser,
+    });
+});
+
+export const getCurrentUser = asyncHandler(async (req, res, next) => {
+    const userId = req.id;
+
+    const { data: user } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+    if (!user) throw new ApiError(404, "User not found");
+
+    const userData = mapUser(user);
+    delete userData.password;
+
+    return res.status(200).json({
+        success: true,
+        user: userData,
     });
 });

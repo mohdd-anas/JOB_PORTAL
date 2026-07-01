@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import AuthInitializer from './components/AuthInitializer'
 
 // Lazy-loaded route components for optimal performance
 const Login = lazy(() => import('./components/auth/Login'))
@@ -124,10 +125,10 @@ const appRouter = createBrowserRouter([
 
 function App() {
     return (
-        <>
+        <AuthInitializer>
             <RouterProvider router={appRouter} />
             <Toaster position='top-right' richColors />
-        </>
+        </AuthInitializer>
     )
 }
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import Navbar from '../shared/Navbar'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import api from '@/lib/api'
+import { supabase, mapJob, mapCompany, mapUser } from '@/lib/supabase'
 import PageTransition from '../shared/PageTransition'
 import { Briefcase, Users, CircleCheck as CheckCircle, Clock, FileText, ChartBar as BarChart3, TrendingUp, ChevronRight, MoveHorizontal as MoreHorizontal, Building2, Award } from 'lucide-react'
 import {
@@ -34,21 +34,36 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+
         const [jobsRes, companiesRes] = await Promise.all([
-          api.get('/job/getadminjobs'),
-          api.get('/company/get'),
+          supabase.from('jobs').select('*, company:companies(*)').eq('created_by', session.user.id),
+          supabase.from('companies').select('*').eq('user_id', session.user.id),
         ])
 
-        const jobs = jobsRes.data.jobs || []
-        const companies = companiesRes.data.companies || []
+        const jobRows = jobsRes.data || []
+        const companyRows = companiesRes.data || []
+        const jobs = jobRows.map(row => mapJob(row, mapCompany(row.company), []))
+        const companies = companyRows.map(row => mapCompany(row))
         let allApplicants = []
         let accepted = 0, rejected = 0, pending = 0, shortlisted = 0
 
         for (const job of jobs) {
           try {
-            const appRes = await api.get(`/application/${job._id}/applicants`)
-            const applicants = appRes.data.applicants || []
-            allApplicants = [...allApplicants, ...applicants.map(app => ({ ...app, jobTitle: job.title }))]
+            const { data: appRows, error: appError } = await supabase
+              .from('applications')
+              .select('*, applicant:users(*)')
+              .eq('job_id', job._id)
+            if (appError) continue
+            const applicants = (appRows || []).map(row => ({
+              _id: row.id,
+              applicant: mapUser(row.applicant),
+              status: row.status,
+              createdAt: row.created_at,
+              jobTitle: job.title
+            }))
+            allApplicants = [...allApplicants, ...applicants]
             applicants.forEach(app => {
               const status = app.status?.toLowerCase() || 'pending'
               if (status === 'accepted') accepted++
@@ -64,7 +79,7 @@ const AdminDashboard = () => {
 
         const applicationsPerJob = jobs.map(job => ({
           name: job.title.length > 15 ? job.title.substring(0, 15) + '...' : job.title,
-          applicants: job.applications?.length || 0,
+          applicants: allApplicants.filter(a => a.jobTitle === job.title).length,
         })).filter(j => j.applicants > 0)
 
         const typeMap = {}

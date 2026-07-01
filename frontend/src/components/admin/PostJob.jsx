@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import Navbar from '../shared/Navbar'
 import { useSelector } from 'react-redux'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import api from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import useGetAllCompanies from '@/hooks/useGetAllCompanies'
@@ -34,19 +34,33 @@ const PostJob = () => {
         if (!input.companyId) { toast.error('Please select a company'); return }
         try {
             setLoading(true)
-            const payload = {
-                ...input,
-                salary: Number(input.salary),
-                experience: Number(input.experience),
-                position: Number(input.position),
-            }
-            const res = await api.post('/job/post', payload)
-            if (res.data.success) {
-                toast.success(res.data.message)
-                navigate('/admin/jobs')
-            }
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) { toast.error('You must be logged in'); return }
+            const requirementsArray = input.requirements
+                .split(',')
+                .map(r => r.trim())
+                .filter(Boolean)
+            const { error } = await supabase
+                .from('jobs')
+                .insert({
+                    title: input.title,
+                    description: input.description,
+                    requirements: requirementsArray,
+                    salary: Number(input.salary),
+                    experience_level: Number(input.experience),
+                    location: input.location,
+                    job_type: input.jobType,
+                    position: Number(input.position),
+                    company_id: input.companyId,
+                    created_by: session.user.id
+                })
+                .select()
+                .single()
+            if (error) throw error
+            toast.success('Job posted successfully')
+            navigate('/admin/jobs')
         } catch (error) {
-            toast.error(error.response && error.response.data ? error.response.data.message : 'Failed to post job')
+            toast.error(error.message || 'Failed to post job')
         } finally {
             setLoading(false)
         }

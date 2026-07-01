@@ -5,9 +5,9 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import api from '@/lib/api'
+import { supabase, mapUser } from '@/lib/supabase'
 import { setUser } from '@/redux/authSlice'
-import { LogOut, User2, Menu, X, Briefcase, Bell, LayoutDashboard, Sun, Moon } from 'lucide-react'
+import { LogOut, User as User2, Menu, X, Briefcase, Bell, LayoutDashboard, Sun, Moon } from 'lucide-react'
 import { useTheme } from '@/context/ThemeContext'
 
 const Navbar = () => {
@@ -20,14 +20,13 @@ const Navbar = () => {
 
     const logoutHandler = async () => {
         try {
-            const res = await api.get('/user/logout')
-            if (res.data.success) {
-                dispatch(setUser(null))
-                navigate('/')
-                toast.success(res.data.message)
-            }
+            const { error } = await supabase.auth.signOut()
+            if (error) throw error
+            dispatch(setUser(null))
+            navigate('/')
+            toast.success('Logged out successfully')
         } catch (error) {
-            toast.error(error.response && error.response.data ? error.response.data.message : 'Logout failed')
+            toast.error(error.message || 'Logout failed')
         }
     }
 

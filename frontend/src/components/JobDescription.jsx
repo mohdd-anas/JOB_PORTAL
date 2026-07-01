@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Navbar from './shared/Navbar'
 import { useParams, useNavigate } from 'react-router-dom'
-import api from '@/lib/api'
+import { supabase, mapJob, mapCompany } from '@/lib/supabase'
 import { useDispatch, useSelector } from 'react-redux'
 import { setSingleJob } from '@/redux/jobSlice'
 import { toast } from 'sonner'
@@ -25,30 +25,64 @@ const JobDescription = () => {
 
     const applyJobHandler = async () => {
         try {
-            const res = await api.post(`/application/apply/${jobId}`, {})
-            if (res.data.success) {
-                setIsApplied(true)
-                dispatch(setSingleJob({
-                    ...singleJob,
-                    applications: [...singleJob.applications, { applicant: user?._id }]
-                }))
-                toast.success(res.data.message)
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) {
+                toast.error('Please log in to apply')
+                return
             }
+            const { error } = await supabase.from('applications').insert({
+                job_id: jobId,
+                applicant_id: session.user.id
+            })
+            if (error) {
+                toast.error(error.message || 'Apply failed')
+                return
+            }
+            setIsApplied(true)
+            dispatch(setSingleJob({
+                ...singleJob,
+                applications: [...(singleJob?.applications || []), { applicant: user?._id }]
+            }))
+            toast.success('Application submitted successfully')
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Apply failed')
+            toast.error(error.message || 'Apply failed')
         }
     }
 
     useEffect(() => {
         const fetchSingleJob = async () => {
             try {
-                const res = await api.get(`/job/getjob/${jobId}`)
-                if (res.data.success) {
-                    dispatch(setSingleJob(res.data.job))
-                    setIsApplied(res.data.job.applications.some(
-                        application => application.applicant === user?._id
-                    ))
+                const { data: jobRow, error: jobError } = await supabase
+                    .from('jobs')
+                    .select('*, company:companies(*)')
+                    .eq('id', jobId)
+                    .maybeSingle()
+                if (jobError || !jobRow) {
+                    console.log(jobError || 'Job not found')
+                    return
                 }
+
+                const { data: applicationRows, error: appError } = await supabase
+                    .from('applications')
+                    .select('*, applicant:users(*)')
+                    .eq('job_id', jobId)
+                if (appError) {
+                    console.log(appError)
+                    return
+                }
+
+                const applications = (applicationRows || []).map(row => ({
+                    _id: row.id,
+                    applicant: row.applicant_id,
+                    status: row.status,
+                    createdAt: row.created_at
+                }))
+
+                const job = mapJob(jobRow, mapCompany(jobRow.company), applications)
+                dispatch(setSingleJob(job))
+                setIsApplied(applications.some(
+                    application => application.applicant === user?._id
+                ))
             } catch (error) {
                 console.log(error)
             }

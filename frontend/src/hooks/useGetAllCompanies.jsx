@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import api from '@/lib/api'
+import { supabase, mapCompany } from '@/lib/supabase'
 import { useDispatch } from 'react-redux'
 import { setCompanies } from '@/redux/companySlice'
 
@@ -9,12 +9,21 @@ const useGetAllCompanies = () => {
     useEffect(() => {
         const fetchCompanies = async () => {
             try {
-                const res = await api.get('/company/get')
-                if (res.data.success) {
-                    dispatch(setCompanies(res.data.companies))
-                }
+                const { data: { session } } = await supabase.auth.getSession()
+                if (!session) return
+
+                const { data, error } = await supabase
+                    .from('companies')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .order('created_at', { ascending: false })
+
+                if (error) throw error
+
+                const companies = (data || []).map(mapCompany)
+                dispatch(setCompanies(companies))
             } catch (error) {
-                console.error('[useGetAllCompanies]', error?.response?.data?.message || error.message)
+                console.error('[useGetAllCompanies]', error.message)
             }
         }
         fetchCompanies()

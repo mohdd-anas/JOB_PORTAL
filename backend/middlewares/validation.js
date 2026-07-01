@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { ApiError } from "./errorHandler.js";
 
-// Helper regex for ObjectId check
-const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+// Helper regex for UUID check (Supabase uses UUIDs)
+const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 // Define Zod schemas
 export const registerSchema = z.object({
@@ -43,7 +43,7 @@ export const jobPostSchema = z.object({
     jobType: z.string().min(1, "Job type is required"),
     experience: z.preprocess((val) => Number(val), z.number().min(0, "Experience cannot be negative")),
     position: z.preprocess((val) => Number(val), z.number().int().min(1, "Number of positions must be at least 1")),
-    companyId: z.string().regex(objectIdRegex, "Invalid Company ID format"),
+    companyId: z.string().regex(uuidRegex, "Invalid Company ID format"),
 });
 
 export const applicationStatusSchema = z.object({

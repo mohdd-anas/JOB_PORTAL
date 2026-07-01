@@ -1,18 +1,18 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import api from '@/lib/api'
 import { toast } from 'sonner'
-import { useDispatch, useSelector } from 'react-redux'
-import { setLoading, setUser } from '@/redux/authSlice'
 import { Loader as Loader2, Mail, Lock, Briefcase } from 'lucide-react'
 import { motion } from 'motion/react'
 import PageTransition from '../shared/PageTransition'
+import { supabase, mapUser } from '@/lib/supabase'
+import { useDispatch } from 'react-redux'
+import { setUser } from '@/redux/authSlice'
 
 const Login = () => {
     const [input, setInput] = useState({ email: '', password: '', role: '' })
+    const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
     const dispatch = useDispatch()
-    const { loading } = useSelector(store => store.auth)
 
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value })
@@ -20,18 +20,44 @@ const Login = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault()
-        dispatch(setLoading(true))
+
+        if (!input.role) {
+            toast.error('Please select a role')
+            return
+        }
+
         try {
-            const res = await api.post('/user/login', input)
-            if (res.data.success) {
-                dispatch(setUser(res.data.user))
-                navigate('/')
-                toast.success(res.data.message)
+            setLoading(true)
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: input.email,
+                password: input.password,
+            })
+
+            if (error) throw error
+
+            // Fetch the user's profile from the users table
+            const { data: profile, error: profileErr } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', data.user.id)
+                .maybeSingle()
+
+            if (profileErr) throw profileErr
+            if (!profile) throw new Error('Profile not found')
+
+            if (profile.role !== input.role) {
+                await supabase.auth.signOut()
+                throw new Error('Account does not exist for the selected role')
             }
+
+            const userData = mapUser(profile)
+            dispatch(setUser(userData))
+            navigate('/')
+            toast.success(`Welcome back, ${profile.fullname}`)
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Login failed')
+            toast.error(error.message || 'Login failed')
         } finally {
-            dispatch(setLoading(false))
+            setLoading(false)
         }
     }
 

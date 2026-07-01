@@ -4,10 +4,10 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useDispatch, useSelector } from 'react-redux'
-import api from '@/lib/api'
+import { supabase, mapUser } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { setUser } from '@/redux/authSlice'
-import { Loader2 } from 'lucide-react'
+import { Loader as Loader2 } from 'lucide-react'
 
 const UpdateProfileDialog = ({ open, setOpen }) => {
     const [loading, setLoading] = useState(false)
@@ -47,25 +47,55 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
 
     const submitHandler = async (e) => {
         e.preventDefault()
-        const formData = new FormData()
-        formData.append('fullname', input.fullname)
-        formData.append('email', input.email)
-        formData.append('phoneNumber', input.phoneNumber)
-        formData.append('bio', input.bio)
-        formData.append('skills', input.skills)
-        if (input.file) formData.append('file', input.file)
-
         try {
             setLoading(true)
-            const res = await api.post('/user/profile/update', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            })
-            if (res.data.success) {
-                dispatch(setUser(res.data.user))
-                toast.success(res.data.message)
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) {
+                toast.error('Please log in to update your profile')
+                return
             }
+
+            const skillsArray = input.skills
+                ? input.skills.split(',').map(s => s.trim()).filter(Boolean)
+                : []
+
+            let resumeDataUrl = user?.profile?.resume || ''
+            let fileName = user?.profile?.resumeOriginalName || ''
+
+            if (input.file) {
+                fileName = input.file.name
+                resumeDataUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onload = () => resolve(reader.result)
+                    reader.onerror = reject
+                    reader.readAsDataURL(input.file)
+                })
+            }
+
+            const { data: updatedRow, error } = await supabase
+                .from('users')
+                .update({
+                    fullname: input.fullname,
+                    email: input.email,
+                    phone_number: input.phoneNumber,
+                    bio: input.bio,
+                    skills: skillsArray,
+                    resume: resumeDataUrl,
+                    resume_original_name: fileName
+                })
+                .eq('id', session.user.id)
+                .select()
+                .single()
+
+            if (error) {
+                toast.error(error.message || 'Update failed')
+                return
+            }
+
+            dispatch(setUser(mapUser(updatedRow)))
+            toast.success('Profile updated successfully')
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Update failed')
+            toast.error(error.message || 'Update failed')
         } finally {
             setLoading(false)
             setOpen(false)

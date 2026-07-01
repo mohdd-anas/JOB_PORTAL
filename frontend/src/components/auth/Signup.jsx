@@ -1,10 +1,19 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import api from '@/lib/api'
 import { toast } from 'sonner'
 import { Loader as Loader2, Mail, Lock, User, Phone, Upload, Briefcase } from 'lucide-react'
 import { motion } from 'motion/react'
 import PageTransition from '../shared/PageTransition'
+import { supabase } from '@/lib/supabase'
+
+const fileToDataUrl = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+    })
+}
 
 const Signup = () => {
     const [input, setInput] = useState({ fullname: '', email: '', phoneNumber: '', password: '', role: '', file: '' })
@@ -21,25 +30,41 @@ const Signup = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault()
-        const formData = new FormData()
-        formData.append('fullname', input.fullname)
-        formData.append('email', input.email)
-        formData.append('phoneNumber', input.phoneNumber)
-        formData.append('password', input.password)
-        formData.append('role', input.role)
-        if (input.file) formData.append('file', input.file)
+
+        if (!input.role) {
+            toast.error('Please select a role')
+            return
+        }
 
         try {
             setLoading(true)
-            const res = await api.post('/user/register', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+            const { data, error } = await supabase.auth.signUp({
+                email: input.email,
+                password: input.password,
+                options: {
+                    data: {
+                        fullname: input.fullname,
+                        phone_number: input.phoneNumber,
+                        role: input.role,
+                    },
+                },
             })
-            if (res.data.success) {
-                navigate('/login')
-                toast.success(res.data.message)
+
+            if (error) throw error
+
+            // Upload profile photo if provided
+            if (input.file && data.user) {
+                const photoDataUrl = await fileToDataUrl(input.file)
+                await supabase
+                    .from('users')
+                    .update({ profile_photo: photoDataUrl })
+                    .eq('id', data.user.id)
             }
+
+            navigate('/login')
+            toast.success('Account created successfully')
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Signup failed')
+            toast.error(error.message || 'Signup failed')
         } finally {
             setLoading(false)
         }

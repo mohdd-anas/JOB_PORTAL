@@ -1,104 +1,118 @@
-import { Company } from "../models/company.model.js";
-import { uploadFile } from "../utils/cloudinary.js";
+import { supabase } from "../utils/supabase.js";
+import { mapCompany } from "../utils/mappers.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../middlewares/errorHandler.js";
 
-// @desc    Register a new company
-// @route   POST /api/v1/company/register
-// @access  Private (Recruiter only)
+const fileToDataUrl = (file) => {
+    if (!file) return "";
+    const base64 = file.buffer.toString("base64");
+    return `data:${file.mimetype};base64,${base64}`;
+};
+
 export const registerCompany = asyncHandler(async (req, res, next) => {
     const { companyName } = req.body;
 
-    let company = await Company.findOne({ name: { $regex: new RegExp(`^${companyName.trim()}$`, "i") } });
-    if (company) {
-        throw new ApiError(400, "A company with this name already exists");
-    }
+    const { data: existing } = await supabase
+        .from("companies")
+        .select("id")
+        .ilike("name", companyName.trim())
+        .maybeSingle();
+    if (existing) throw new ApiError(400, "A company with this name already exists");
 
-    company = await Company.create({ 
-        name: companyName.trim(), 
-        userId: req.id 
-    });
+    const { data, error } = await supabase
+        .from("companies")
+        .insert({ name: companyName.trim(), user_id: req.id })
+        .select()
+        .single();
 
-    return res.status(201).json({ 
+    if (error) throw new ApiError(500, error.message);
+
+    return res.status(201).json({
         success: true,
-        message: "Company registered successfully", 
-        company 
+        message: "Company registered successfully",
+        company: mapCompany(data),
     });
 });
 
-// @desc    Get all companies for logged in recruiter
-// @route   GET /api/v1/company/get
-// @access  Private (Recruiter only)
 export const getCompany = asyncHandler(async (req, res, next) => {
-    const userId = req.id;
-    const companies = await Company.find({ userId }).sort({ createdAt: -1 });
-    
-    return res.status(200).json({ 
+    const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("user_id", req.id)
+        .order("created_at", { ascending: false });
+
+    if (error) throw new ApiError(500, error.message);
+
+    const companies = (data || []).map(mapCompany);
+
+    return res.status(200).json({
         success: true,
         message: "Companies fetched successfully",
-        companies: companies || [] 
+        companies,
     });
 });
 
-// @desc    Get company by ID
-// @route   GET /api/v1/company/get/:id
-// @access  Private
 export const getCompanyById = asyncHandler(async (req, res, next) => {
-    const company = await Company.findById(req.params.id);
-    if (!company) {
-        throw new ApiError(404, "Company not found");
-    }
+    const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("id", req.params.id)
+        .maybeSingle();
 
-    return res.status(200).json({ 
+    if (error) throw new ApiError(500, error.message);
+    if (!data) throw new ApiError(404, "Company not found");
+
+    return res.status(200).json({
         success: true,
         message: "Company details fetched",
-        company 
+        company: mapCompany(data),
     });
 });
 
-// @desc    Update company details
-// @route   PUT /api/v1/company/update/:id
-// @access  Private (Recruiter only)
 export const updateCompany = asyncHandler(async (req, res, next) => {
     const { name, description, website, location } = req.body;
     const companyId = req.params.id;
 
-    let company = await Company.findById(companyId);
-    if (!company) {
-        throw new ApiError(404, "Company not found");
-    }
+    const { data: company, error: fetchErr } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("id", companyId)
+        .maybeSingle();
 
-    // Verify ownership
-    if (company.userId.toString() !== req.id.toString()) {
+    if (fetchErr) throw new ApiError(500, fetchErr.message);
+    if (!company) throw new ApiError(404, "Company not found");
+
+    if (company.user_id !== req.id)
         throw new ApiError(403, "You do not have permission to update this company");
-    }
 
-    // Check name uniqueness if changed
+    const updates = {};
     if (name && name.trim().toLowerCase() !== company.name.toLowerCase()) {
-        const nameExists = await Company.findOne({ 
-            name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
-            _id: { $ne: companyId } 
-        });
-        if (nameExists) {
-            throw new ApiError(400, "A company with this name already exists");
-        }
-        company.name = name.trim();
+        const { data: nameExists } = await supabase
+            .from("companies")
+            .select("id")
+            .ilike("name", name.trim())
+            .neq("id", companyId)
+            .maybeSingle();
+        if (nameExists) throw new ApiError(400, "A company with this name already exists");
+        updates.name = name.trim();
     }
+    if (description !== undefined) updates.description = description;
+    if (website !== undefined) updates.website = website;
+    if (location !== undefined) updates.location = location;
+    if (req.file) updates.logo = fileToDataUrl(req.file);
 
-    if (description !== undefined) company.description = description;
-    if (website !== undefined) company.website = website;
-    if (location !== undefined) company.location = location;
+    const { data: updated, error } = await supabase
+        .from("companies")
+        .update(updates)
+        .eq("id", companyId)
+        .select()
+        .single();
 
-    if (req.file) {
-        const logoUrl = await uploadFile(req.file);
-        company.logo = logoUrl;
-    }
+    if (error) throw new ApiError(500, error.message);
 
-    await company.save();
-
-    return res.status(200).json({ 
+    return res.status(200).json({
         success: true,
-        message: "Company updated successfully", 
-        company 
+        message: "Company updated successfully",
+        company: mapCompany(updated),
     });
 });

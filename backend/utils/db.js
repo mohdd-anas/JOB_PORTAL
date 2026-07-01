@@ -1,16 +1,19 @@
-import mongoose from "mongoose";
+import { supabase } from "./supabase.js";
 
-const connectDB=async() => {
-    try{
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("MongoDB connected successfully");
+const connectDB = async () => {
+    try {
+        const { error } = await supabase
+            .from("users")
+            .select("id")
+            .limit(1);
+        if (error) {
+            console.log("Supabase connection failed:", error.message);
+        } else {
+            console.log("Supabase connected successfully");
+        }
+    } catch (error) {
+        console.log("Supabase connection failed:", error.message);
     }
-    catch(error)
-    {
-        console.log("MongoDB connection failed");
-    }
+};
 
-    }
-    export default connectDB;
-
-    
+export default connectDB;
