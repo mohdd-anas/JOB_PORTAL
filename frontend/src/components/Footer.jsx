@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Briefcase, Twitter, Linkedin, Github, Mail, ArrowRight } from 'lucide-react'
+import { Briefcase, Battery as Twitter, Link as Linkedin, GitFork as Github, Mail, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 
 const Footer = () => {

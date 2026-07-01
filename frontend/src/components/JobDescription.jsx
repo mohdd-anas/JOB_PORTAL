@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setSingleJob } from '@/redux/jobSlice'
 import { toast } from 'sonner'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { MapPin, Briefcase, Clock, IndianRupee, Users, Calendar, ArrowLeft, CheckCircle } from 'lucide-react'
+import { MapPin, Briefcase, Clock, IndianRupee, Users, Calendar, ArrowLeft, CircleCheck as CheckCircle } from 'lucide-react'
 import PageTransition from './shared/PageTransition'
 
 const JobDescription = () => {

@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux'
 import api from '@/lib/api'
 import { toast } from 'sonner'
 import useGetCompanyById from '@/hooks/useGetCompanyById'
-import { ArrowLeft, Loader2, Building2, Globe, MapPin, FileText, Upload } from 'lucide-react'
+import { ArrowLeft, Loader as Loader2, Building2, Globe, MapPin, FileText, Upload } from 'lucide-react'
 import PageTransition from '../shared/PageTransition'
 
 const CompanySetup = () => {

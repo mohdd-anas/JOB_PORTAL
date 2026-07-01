@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
 import { toast } from 'sonner'
-import { Loader2, Mail, Lock, User, Phone, Upload, Briefcase } from 'lucide-react'
+import { Loader as Loader2, Mail, Lock, User, Phone, Upload, Briefcase } from 'lucide-react'
 import { motion } from 'motion/react'
 import PageTransition from '../shared/PageTransition'
 

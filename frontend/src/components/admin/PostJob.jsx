@@ -6,7 +6,7 @@ import api from '@/lib/api'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import useGetAllCompanies from '@/hooks/useGetAllCompanies'
-import { ArrowLeft, Loader2, Briefcase, MapPin, DollarSign, Users, Clock, Code } from 'lucide-react'
+import { ArrowLeft, Loader as Loader2, Briefcase, MapPin, DollarSign, Users, Clock, Code } from 'lucide-react'
 import PageTransition from '../shared/PageTransition'
 
 const PostJob = () => {

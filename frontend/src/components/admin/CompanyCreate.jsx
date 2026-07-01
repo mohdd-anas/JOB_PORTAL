@@ -5,7 +5,7 @@ import api from '@/lib/api'
 import { toast } from 'sonner'
 import { useDispatch } from 'react-redux'
 import { setSingleCompany } from '@/redux/companySlice'
-import { ArrowLeft, Building2, Loader2 } from 'lucide-react'
+import { ArrowLeft, Building2, Loader as Loader2 } from 'lucide-react'
 import PageTransition from '../shared/PageTransition'
 
 const CompanyCreate = () => {

@@ -4,10 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import api from '@/lib/api'
 import PageTransition from '../shared/PageTransition'
-import {
-  Briefcase, Users, CheckCircle, Clock, FileText, BarChart3,
-  TrendingUp, ChevronRight, MoreHorizontal, Building2, Award
-} from 'lucide-react'
+import { Briefcase, Users, CircleCheck as CheckCircle, Clock, FileText, ChartBar as BarChart3, TrendingUp, ChevronRight, MoveHorizontal as MoreHorizontal, Building2, Award } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart as RePieChart, Pie, Cell,

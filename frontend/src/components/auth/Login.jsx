@@ -4,7 +4,7 @@ import api from '@/lib/api'
 import { toast } from 'sonner'
 import { useDispatch, useSelector } from 'react-redux'
 import { setLoading, setUser } from '@/redux/authSlice'
-import { Loader2, Mail, Lock, Briefcase } from 'lucide-react'
+import { Loader as Loader2, Mail, Lock, Briefcase } from 'lucide-react'
 import { motion } from 'motion/react'
 import PageTransition from '../shared/PageTransition'
 
