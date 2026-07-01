@@ -2,6 +2,7 @@ import React from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Clock, IndianRupee, Bookmark } from 'lucide-react'
+import MotionCard from './shared/MotionCard'
 
 const Job = ({ job }) => {
     const navigate = useNavigate()
@@ -13,7 +14,7 @@ const Job = ({ job }) => {
     }
 
     return (
-        <div className='bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-lg hover:border-[#6A38C2]/20 transition-all group'>
+        <MotionCard className='bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-lg hover:border-[#6A38C2]/20 transition-all group'>
             {/* Header */}
             <div className='flex items-start justify-between mb-4'>
                 <div className='flex items-center gap-3'>
@@ -68,7 +69,7 @@ const Job = ({ job }) => {
                     View Details
                 </button>
             </div>
-        </div>
+        </MotionCard>
     )
 }
 

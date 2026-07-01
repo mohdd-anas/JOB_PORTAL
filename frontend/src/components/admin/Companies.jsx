@@ -7,6 +7,7 @@ import useGetAllCompanies from '@/hooks/useGetAllCompanies'
 import { setSearchCompanyByText } from '@/redux/companySlice'
 import { Plus, Search, Building2 } from 'lucide-react'
 import { useSelector } from 'react-redux'
+import PageTransition from '../shared/PageTransition'
 
 const Companies = () => {
     useGetAllCompanies()
@@ -20,6 +21,7 @@ const Companies = () => {
     }, [input])
 
     return (
+        <PageTransition>
         <div className='min-h-screen bg-gray-50 dark:bg-gray-900'>
             <Navbar />
             <div className='max-w-6xl mx-auto px-4 py-8'>
@@ -76,6 +78,7 @@ const Companies = () => {
                 )}
             </div>
         </div>
+        </PageTransition>
     )
 }
 

@@ -7,6 +7,7 @@ import { useDispatch } from 'react-redux'
 import { setAllApplicants } from '@/redux/applicationSlice'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
+import PageTransition from '../shared/PageTransition'
 
 const Applicants = () => {
     const params = useParams()
@@ -28,6 +29,7 @@ const Applicants = () => {
     }, [params.id])
 
     return (
+        <PageTransition>
         <div>
             <Navbar />
             <div className='max-w-7xl mx-auto px-4'>
@@ -45,6 +47,7 @@ const Applicants = () => {
                 <ApplicantsTable />
             </div>
         </div>
+        </PageTransition>
     )
 }
 

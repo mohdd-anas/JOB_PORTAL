@@ -6,6 +6,7 @@ import api from '@/lib/api'
 import { toast } from 'sonner'
 import useGetCompanyById from '@/hooks/useGetCompanyById'
 import { ArrowLeft, Loader2, Building2, Globe, MapPin, FileText, Upload } from 'lucide-react'
+import PageTransition from '../shared/PageTransition'
 
 const CompanySetup = () => {
     const params = useParams()
@@ -73,6 +74,7 @@ const CompanySetup = () => {
     ]
 
     return (
+        <PageTransition>
         <div className='min-h-screen bg-gray-50 dark:bg-gray-900'>
             <Navbar />
             <div className='max-w-2xl mx-auto px-4 py-8'>
@@ -164,6 +166,7 @@ const CompanySetup = () => {
                 </form>
             </div>
         </div>
+        </PageTransition>
     )
 }
 

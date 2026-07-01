@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import Navbar from './shared/Navbar'
 import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import api from '@/lib/api'
 import { useDispatch, useSelector } from 'react-redux'
 import { setSingleJob } from '@/redux/jobSlice'
 import { toast } from 'sonner'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { MapPin, Briefcase, Clock, IndianRupee, Users, Calendar, ArrowLeft, CheckCircle } from 'lucide-react'
+import PageTransition from './shared/PageTransition'
 
 const JobDescription = () => {
     const { singleJob } = useSelector(store => store.job)
@@ -24,11 +25,7 @@ const JobDescription = () => {
 
     const applyJobHandler = async () => {
         try {
-            const res = await axios.post(
-                `http://localhost:8000/api/v1/application/apply/${jobId}`,
-                {},
-                { withCredentials: true }
-            )
+            const res = await api.post(`/application/apply/${jobId}`, {})
             if (res.data.success) {
                 setIsApplied(true)
                 dispatch(setSingleJob({
@@ -45,10 +42,7 @@ const JobDescription = () => {
     useEffect(() => {
         const fetchSingleJob = async () => {
             try {
-                const res = await axios.get(
-                    `http://localhost:8000/api/v1/job/getjob/${jobId}`,
-                    { withCredentials: true }
-                )
+                const res = await api.get(`/job/getjob/${jobId}`)
                 if (res.data.success) {
                     dispatch(setSingleJob(res.data.job))
                     setIsApplied(res.data.job.applications.some(
@@ -63,6 +57,7 @@ const JobDescription = () => {
     }, [jobId, dispatch, user?._id])
 
     return (
+        <PageTransition>
         <div className='bg-gray-50 min-h-screen'>
             <Navbar />
             <div className='max-w-5xl mx-auto px-4 py-10'>
@@ -199,6 +194,7 @@ const JobDescription = () => {
                 </div>
             </div>
         </div>
+        </PageTransition>
     )
 }
 

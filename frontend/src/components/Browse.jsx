@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { setSearchJobQuery } from '@/redux/jobSlice'
 import useGetAllJobs from '@/hooks/useGetAllJobs'
 import { useLocation } from 'react-router-dom'
+import PageTransition from './shared/PageTransition'
 
 const Browse = () => {
     const dispatch = useDispatch()
@@ -25,6 +26,7 @@ const Browse = () => {
     const { allJobs } = useSelector(store => store.job)
 
     return (
+        <PageTransition>
         <div>
             <Navbar />
             <div className='max-w-7xl mx-auto my-10 px-4'>
@@ -39,6 +41,7 @@ const Browse = () => {
                 }
             </div>
         </div>
+        </PageTransition>
     )
 }
 

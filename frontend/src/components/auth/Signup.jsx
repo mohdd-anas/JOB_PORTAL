@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
 import { toast } from 'sonner'
 import { Loader2, Mail, Lock, User, Phone, Upload, Briefcase } from 'lucide-react'
+import { motion } from 'motion/react'
+import PageTransition from '../shared/PageTransition'
 
 const Signup = () => {
     const [input, setInput] = useState({ fullname: '', email: '', phoneNumber: '', password: '', role: '', file: '' })
@@ -44,8 +46,14 @@ const Signup = () => {
     }
 
     return (
+        <PageTransition>
         <div className='min-h-screen bg-gradient-to-br from-[#f8f4ff] to-[#eef2ff] flex items-center justify-center px-4 py-10'>
-            <div className='w-full max-w-md'>
+            <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className='w-full max-w-md'
+            >
                 {/* Logo */}
                 <div className='text-center mb-8'>
                     <Link to='/'>
@@ -166,8 +174,9 @@ const Signup = () => {
                         <Link to='/login' className='text-[#6A38C2] font-semibold hover:underline'>Sign in</Link>
                     </p>
                 </div>
-            </div>
+            </motion.div>
         </div>
+        </PageTransition>
     )
 }
 

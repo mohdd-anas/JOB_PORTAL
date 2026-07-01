@@ -3,10 +3,15 @@ import Navbar from './shared/Navbar'
 import FilterCard from './FilterCard'
 import Job from './Job'
 import { useSelector } from 'react-redux'
+import PageTransition from './shared/PageTransition'
+import { JobCardSkeletonGrid } from './shared/Skeleton'
+import useGetAllJobs from '@/hooks/useGetAllJobs'
 
 const Jobs = () => {
+    useGetAllJobs()
     const { allJobs, searchJobQuery } = useSelector(store => store.job)
     const [filterJobs, setFilterJobs] = useState(allJobs)
+    const [loading, setLoading] = useState(true)
 
     // filterState is the single source of truth; filters + search are combined together
     const [filterState, setFilterState] = useState({
@@ -61,7 +66,12 @@ const Jobs = () => {
         applyFilters()
     }, [applyFilters])
 
+    useEffect(() => {
+        if (allJobs.length > 0) setLoading(false)
+    }, [allJobs])
+
     return (
+        <PageTransition>
         <div>
             <Navbar />
             <div className='max-w-7xl mx-auto mt-5 px-4'>
@@ -69,7 +79,13 @@ const Jobs = () => {
                     <div className='w-1/5'>
                         <FilterCard filterState={filterState} setFilterState={setFilterState} />
                     </div>
-                    {filterJobs.length <= 0
+                    {loading && allJobs.length === 0
+                        ? (
+                            <div className='flex-1 h-[88vh] overflow-y-auto pb-5'>
+                                <JobCardSkeletonGrid count={6} />
+                            </div>
+                        )
+                        : filterJobs.length <= 0
                         ? (
                             <div className='flex-1 flex flex-col items-center justify-center h-[60vh] text-gray-400'>
                                 <svg className='w-16 h-16 mb-4 opacity-30' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -92,6 +108,7 @@ const Jobs = () => {
                 </div>
             </div>
         </div>
+        </PageTransition>
     )
 }
 

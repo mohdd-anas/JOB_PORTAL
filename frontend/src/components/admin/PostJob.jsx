@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import useGetAllCompanies from '@/hooks/useGetAllCompanies'
 import { ArrowLeft, Loader2, Briefcase, MapPin, DollarSign, Users, Clock, Code } from 'lucide-react'
+import PageTransition from '../shared/PageTransition'
 
 const PostJob = () => {
     useGetAllCompanies()
@@ -61,6 +62,7 @@ const PostJob = () => {
     ]
 
     return (
+        <PageTransition>
         <div className='min-h-screen bg-gray-50 dark:bg-gray-900'>
             <Navbar />
             <div className='max-w-3xl mx-auto px-4 py-8'>
@@ -192,6 +194,7 @@ const PostJob = () => {
                 </form>
             </div>
         </div>
+        </PageTransition>
     )
 }
 

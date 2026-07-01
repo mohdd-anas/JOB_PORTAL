@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useDispatch } from 'react-redux'
 import { setSingleCompany } from '@/redux/companySlice'
 import { ArrowLeft, Building2, Loader2 } from 'lucide-react'
+import PageTransition from '../shared/PageTransition'
 
 const CompanyCreate = () => {
     const navigate = useNavigate()
@@ -31,6 +32,7 @@ const CompanyCreate = () => {
     }
 
     return (
+        <PageTransition>
         <div className='min-h-screen bg-gray-50 dark:bg-gray-900'>
             <Navbar />
             <div className='max-w-lg mx-auto px-4 py-16'>
@@ -88,6 +90,7 @@ const CompanyCreate = () => {
                 </div>
             </div>
         </div>
+        </PageTransition>
     )
 }
 

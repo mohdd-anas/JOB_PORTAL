@@ -7,6 +7,7 @@ import UpdateProfileDialog from './UpdateProfileDialog'
 import { useSelector } from 'react-redux'
 import useGetAppliedJobs from '@/hooks/useGetAppliedJobs'
 import { Mail, Phone, FileText, Pen } from 'lucide-react'
+import PageTransition from './shared/PageTransition'
 
 const Profile = () => {
     useGetAppliedJobs()
@@ -20,6 +21,7 @@ const Profile = () => {
     const skills = user && user.profile && user.profile.skills
 
     return (
+        <PageTransition>
         <div className='bg-gray-50 min-h-screen'>
             <Navbar />
             <div className='max-w-5xl mx-auto px-4 py-10'>
@@ -109,6 +111,7 @@ const Profile = () => {
             </div>
             <UpdateProfileDialog open={open} setOpen={setOpen} />
         </div>
+        </PageTransition>
     )
 }
 
