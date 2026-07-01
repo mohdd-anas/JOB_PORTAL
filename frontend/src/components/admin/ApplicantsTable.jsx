@@ -1,6 +1,6 @@
 import React from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { setAllApplicant } from '@/redux/applicationSlice'
+import { setAllApplicants } from '@/redux/applicationSlice'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { MoveVertical as MoreVertical, FileText, CircleCheck as CheckCircle, Circle as XCircle, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -20,7 +20,7 @@ const ApplicantsTable = () => {
             const updated = (applicants || []).map(app =>
                 app._id === id ? { ...app, status: status.toLowerCase() } : app
             )
-            dispatch(setAllApplicant(updated))
+            dispatch(setAllApplicants(updated))
             toast.success('Status updated successfully')
         } catch (error) {
             toast.error(error.message || 'Status update failed')
